@@ -1,31 +1,45 @@
+![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Last Commit](https://img.shields.io/github/last-commit/achmadnaufal/soil-carbon-estimator)
+
 # Soil Carbon Estimator
 
-Soil organic carbon (SOC) stock estimation and monitoring tools for tropical and subtropical sites.
+A Python toolkit for estimating soil organic carbon (SOC) stocks from field measurements, designed for tropical and subtropical sites. It automates data validation, SOC calculation using the standard bulk-density formula, and generates summary statistics for environmental research and land-use analysis.
 
 ## Features
 
-- Data ingestion from CSV or Excel files
+- Load soil data from CSV or Excel files
 - Automated SOC stock calculation (tC/ha) using the standard bulk-density formula
 - Input validation with clear error messages for out-of-range and missing values
-- Summary statistics and trend reporting
-- Sample data for demo and testing purposes
-- Comprehensive test suite (pytest)
-
-## Installation
-
-```bash
-pip install -r requirements.txt
-```
-
-For running tests, also install pytest:
-
-```bash
-pip install pytest
-```
+- Column-name normalisation and data cleaning
+- Summary statistics (mean, min, max, totals) per numeric column
+- Immutable data pipeline -- all transformations return new objects, never mutate inputs
+- 42 unit and integration tests with pytest
 
 ## Quick Start
 
-### 1. Run the full pipeline on the included demo data
+```bash
+# Clone the repository
+git clone https://github.com/achmadnaufal/soil-carbon-estimator.git
+cd soil-carbon-estimator
+
+# Create a virtual environment and install dependencies
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Run the estimator on the demo dataset
+python -c "
+from src.main import SoilCarbonEstimator
+result = SoilCarbonEstimator().run('demo/sample_data.csv')
+print(f\"Records: {result['total_records']}\")
+print(f\"Mean SOC: {result['soc_stats']['mean_tC_ha']} tC/ha\")
+"
+```
+
+## Usage
+
+### Full pipeline on the included demo data
 
 ```python
 from src.main import SoilCarbonEstimator
@@ -33,95 +47,112 @@ from src.main import SoilCarbonEstimator
 estimator = SoilCarbonEstimator()
 result = estimator.run("demo/sample_data.csv")
 
-print(f"Records processed : {result['total_records']}")
-print(f"Mean SOC stock    : {result['soc_stats']['mean_tC_ha']:.2f} tC/ha")
-print(f"Total SOC stock   : {result['soc_stats']['total_tC_ha']:.2f} tC/ha")
+print(f"Records processed: {result['total_records']}")
+print(f"Mean SOC stock:    {result['soc_stats']['mean_tC_ha']} tC/ha")
+print(f"Total SOC stock:   {result['soc_stats']['total_tC_ha']} tC/ha")
 ```
 
-### 2. Load, validate, and analyse your own CSV
-
-```python
-import pandas as pd
-from src.main import SoilCarbonEstimator
-
-estimator = SoilCarbonEstimator()
-
-# Load data
-df = estimator.load_data("your_data.csv")
-
-# Validate and analyse
-result = estimator.analyze(df)
-
-# Export flat metrics table
-metrics_df = estimator.to_dataframe(result)
-metrics_df.to_csv("output/metrics.csv", index=False)
-```
-
-### 3. Calculate a single SOC stock value
+### Single SOC stock calculation
 
 ```python
 from src.soc_calculator import calculate_soc_stock
 
-# bulk_density_g_cm3, organic_carbon_pct, depth_cm
+# calculate_soc_stock(bulk_density_g_cm3, organic_carbon_pct, depth_cm)
 stock = calculate_soc_stock(1.12, 2.85, 30)
 print(f"SOC stock: {stock} tC/ha")
-# SOC stock: 9576.0 tC/ha
+# SOC stock: 95.76 tC/ha
 ```
 
-### 4. Add computed SOC stock to an existing DataFrame
+### Sample output
 
-```python
-import pandas as pd
-from src.soc_calculator import add_soc_stock_column
-
-df = pd.read_csv("demo/sample_data.csv")
-enriched = add_soc_stock_column(df)   # returns a new DataFrame, original unchanged
-print(enriched[["site_id", "soc_stock_tC_ha"]].head())
-```
-
-## Data Format
-
-### Required columns for SOC stock calculation
-
-| Column | Type | Description |
-|---|---|---|
-| `bulk_density_g_cm3` | float | Soil bulk density (g/cm3), range 0–2.65 |
-| `organic_carbon_pct` | float | Organic carbon content (%), range 0–100 |
-| `depth_cm` | float | Sampling depth (cm), range 0–300 |
-
-### Additional columns recognised in demo data
-
-| Column | Type | Description |
-|---|---|---|
-| `site_id` | str | Unique site identifier |
-| `latitude` | float | Decimal degrees (WGS84) |
-| `longitude` | float | Decimal degrees (WGS84) |
-| `clay_pct` | float | Clay fraction (%) |
-| `land_use` | str | Land-use category |
-| `sampling_date` | str | ISO 8601 date string |
-| `soc_stock_tC_ha` | float | Pre-computed reference SOC stock |
-
-## Sample Data
-
-The file `demo/sample_data.csv` contains 20 realistic rows representing tropical and subtropical soil sampling sites across Java, Indonesia.  Site IDs follow the pattern `TH001`–`TH020`.
-
-Land-use categories present: `tropical_forest`, `agroforestry`, `cropland`, `grassland`, `peatland`, `bare_soil`.
-
-Values were constructed to reflect published literature ranges:
-
-- Bulk density: 1.05–1.42 g/cm3
-- Organic carbon: 0.98–4.12 %
-- Sampling depth: 20 or 30 cm
-- SOC stock: ~40–125 tC/ha
-
-### Preview
+Running the full pipeline on `demo/sample_data.csv` (20 tropical soil sites):
 
 ```
-site_id  lat      lon       depth_cm  bulk_density  organic_carbon_pct  land_use         soc_stock_tC_ha
-TH001    -6.2145  106.8451  30        1.12          2.85                tropical_forest  96.12
-TH002    -6.3012  106.9102  30        1.08          3.41                tropical_forest  110.48
-TH003    -6.1887  106.7923  20        1.25          1.92                cropland         48.00
+=== Soil Carbon Estimator ===
+File: demo/sample_data.csv
+Records processed: 20
+
+--- SOC Stock Summary ---
+  mean_tC_ha: 75.86
+  min_tC_ha: 41.75
+  max_tC_ha: 121.34
+  total_tC_ha: 1517.16
+  n_valid: 20
+
+--- Column Means ---
+  latitude: -6.832
+  longitude: 107.38
+  depth_cm: 27.0
+  bulk_density_g_cm3: 1.202
+  organic_carbon_pct: 2.441
+  clay_pct: 36.0
+  soc_stock_tC_ha: 75.858
 ```
+
+### Running tests
+
+```bash
+pytest tests/ -v
+```
+
+```
+tests/test_estimator.py::TestCalculateSOCStock::test_basic_calculation PASSED
+tests/test_estimator.py::TestCalculateSOCStock::test_zero_organic_carbon_returns_zero PASSED
+tests/test_estimator.py::TestRunPipeline::test_run_on_sample_csv PASSED
+...
+============================== 42 passed in 0.25s ==============================
+```
+
+## Tech Stack
+
+| Tool | Purpose |
+|------|---------|
+| **Python 3.9+** | Core language |
+| **pandas** | Data loading, transformation, and analysis |
+| **NumPy** | Numeric computation and array operations |
+| **SciPy** | Statistical utilities |
+| **Rich** | Terminal formatting |
+| **pytest** | Testing framework with coverage reporting |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A["CSV / Excel\nInput File"] -->|load_data| B["Raw\nDataFrame"]
+    B -->|preprocess| C["Cleaned\nDataFrame"]
+    C -->|validate + filter| D["Validated\nDataFrame"]
+    D -->|add_soc_stock_column| E["DataFrame +\nsoc_stock_tC_ha"]
+    E -->|analyze| F["Summary\nDict"]
+    F -->|to_dataframe| G["Flat Metrics\nDataFrame"]
+
+    subgraph SoilCarbonEstimator
+        B
+        C
+        D
+        E
+        F
+        G
+    end
+
+    subgraph soc_calculator
+        H["calculate_soc_stock()"]
+        I["validate_dataframe()"]
+        J["filter_valid_rows()"]
+    end
+
+    D -.->|calls| I
+    D -.->|calls| J
+    E -.->|calls per row| H
+```
+
+### Data flow
+
+1. **Load** -- `SoilCarbonEstimator.load_data()` reads CSV or Excel into a pandas DataFrame.
+2. **Preprocess** -- Column names are normalised (lowercased, whitespace stripped), fully-empty rows are dropped.
+3. **Validate & Filter** -- `validate_dataframe()` checks required columns exist and are numeric. `filter_valid_rows()` drops rows outside physical ranges (e.g., bulk density > 2.65 g/cm3).
+4. **Calculate** -- `add_soc_stock_column()` applies the SOC formula row-by-row: `BD * (OC% / 100) * depth * 100`.
+5. **Analyse** -- Descriptive statistics, column means, totals, and SOC-specific summary metrics are computed.
+6. **Export** -- `to_dataframe()` flattens the result dict into a two-column metrics table for downstream use.
 
 ## Project Structure
 
@@ -129,54 +160,20 @@ TH003    -6.1887  106.7923  20        1.25          1.92                cropland
 soil-carbon-estimator/
 ├── src/
 │   ├── __init__.py
-│   ├── main.py            # SoilCarbonEstimator class (pipeline entry point)
-│   ├── soc_calculator.py  # Pure calculation and validation functions
-│   └── data_generator.py  # Synthetic data generator for development
+│   ├── main.py             # SoilCarbonEstimator pipeline class
+│   ├── soc_calculator.py   # Pure SOC calculation and validation functions
+│   └── data_generator.py   # Synthetic data generator
 ├── tests/
-│   └── test_estimator.py  # Pytest test suite (30+ assertions, 8+ test functions)
+│   └── test_estimator.py   # 42 tests across 8 test classes
 ├── demo/
-│   └── sample_data.csv    # 20-row realistic tropical soil dataset
-├── data/                  # Drop your own data files here (gitignored)
+│   └── sample_data.csv     # 20-row tropical soil dataset
+├── sample_data/
+│   └── sample_data.csv     # Standalone sample for quick testing
 ├── examples/
-│   └── basic_usage.py     # Runnable usage examples
+│   └── basic_usage.py      # Runnable usage example
 ├── requirements.txt
-├── CHANGELOG.md
+├── LICENSE
 └── README.md
 ```
 
-## Running Tests
-
-```bash
-# Run all tests with verbose output
-pytest tests/ -v
-
-# Run with coverage report
-pip install pytest-cov
-pytest tests/ -v --cov=src --cov-report=term-missing
-```
-
-Expected output (abbreviated):
-
-```
-tests/test_estimator.py::TestCalculateSOCStock::test_basic_calculation PASSED
-tests/test_estimator.py::TestCalculateSOCStock::test_zero_organic_carbon_returns_zero PASSED
-...
-================================ 30 passed in 1.23s ================================
-```
-
-## Input Validation
-
-The library validates all inputs at system boundaries:
-
-- Negative values for bulk density, organic carbon, or depth raise `ValueError`.
-- Percentages above 100 raise `ValueError`.
-- Depth values above 300 cm raise `ValueError`.
-- Non-numeric data in required columns raises `ValueError`.
-- Missing files raise `FileNotFoundError`.
-- Non-CSV/Excel extensions raise `ValueError`.
-
-All data-transformation functions return new objects and never mutate inputs.
-
-## License
-
-MIT License — free to use, modify, and distribute.
+> Built by [Achmad Naufal](https://github.com/achmadnaufal) | Lead Data Analyst | Power BI · SQL · Python · GIS

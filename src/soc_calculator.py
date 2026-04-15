@@ -51,11 +51,12 @@ def calculate_soc_stock(
     Uses the standard formula::
 
         SOC_stock (tC/ha) = bulk_density (g/cm3)
-                            × organic_carbon_pct (%)
+                            × (organic_carbon_pct / 100)
                             × depth (cm)
                             × 100
 
-    The factor of 100 converts from g/cm2 to tC/ha.
+    Dividing OC% by 100 converts from percentage to fraction; the
+    remaining factor of 100 converts from g/cm2 to tC/ha.
 
     Parameters
     ----------
@@ -81,9 +82,12 @@ def calculate_soc_stock(
     --------
     >>> calculate_soc_stock(1.2, 2.5, 30)
     90.0
+
+    The factor of 100 converts g/cm2 to tC/ha, while dividing OC% by 100
+    converts percentage to a fraction.
     """
     _validate_soc_inputs(bulk_density_g_cm3, organic_carbon_pct, depth_cm)
-    stock = bulk_density_g_cm3 * organic_carbon_pct * depth_cm * 100
+    stock = bulk_density_g_cm3 * (organic_carbon_pct / 100) * depth_cm * 100
     return round(stock, 2)
 
 

@@ -42,9 +42,9 @@ class TestCalculateSOCStock:
         """Standard mid-range inputs should return the expected value."""
         from src.soc_calculator import calculate_soc_stock
         result = calculate_soc_stock(1.2, 2.5, 30)
-        # 1.2 × 2.5 × 30 × 100 = 9000  tC/ha … wait, unit check:
-        # formula: BD(g/cm3) × OC(%) × depth(cm) × 100 → tC/ha
-        assert result == pytest.approx(9000.0, rel=1e-4)
+        # formula: BD(g/cm3) × (OC% / 100) × depth(cm) × 100 → tC/ha
+        # 1.2 × 0.025 × 30 × 100 = 90.0
+        assert result == pytest.approx(90.0, rel=1e-4)
 
     def test_result_rounded_to_two_decimal_places(self):
         """Return value must be rounded to two decimal places."""
@@ -75,7 +75,7 @@ class TestCalculateSOCStock:
         from src.soc_calculator import calculate_soc_stock
         # TH001: BD=1.12, OC=2.85, depth=30
         result = calculate_soc_stock(1.12, 2.85, 30)
-        expected = 1.12 * 2.85 * 30 * 100
+        expected = 1.12 * (2.85 / 100) * 30 * 100
         assert result == pytest.approx(expected, rel=1e-4)
 
 
