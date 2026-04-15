@@ -1,10 +1,12 @@
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Last Commit](https://img.shields.io/github/last-commit/achmadnaufal/soil-carbon-estimator)
+![Tests](https://img.shields.io/badge/tests-pytest-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-80%25%2B-brightgreen)
 
 # Soil Carbon Estimator
 
-A Python toolkit for estimating soil organic carbon (SOC) stocks from field measurements, designed for tropical and subtropical sites. It automates data validation, SOC calculation using the standard bulk-density formula, and generates summary statistics for environmental research and land-use analysis.
+A Python toolkit for estimating soil organic carbon (SOC) stocks from field measurements, designed for tropical and subtropical sites (including Indonesian conditions). It automates data validation, SOC calculation using the standard bulk-density formula, and generates summary statistics for environmental research and land-use analysis.
 
 ## Features
 
@@ -14,26 +16,27 @@ A Python toolkit for estimating soil organic carbon (SOC) stocks from field meas
 - Column-name normalisation and data cleaning
 - Summary statistics (mean, min, max, totals) per numeric column
 - Immutable data pipeline -- all transformations return new objects, never mutate inputs
-- 42 unit and integration tests with pytest
+- Comprehensive unit and integration tests with pytest (80%+ coverage target)
 
 ## Quick Start
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/achmadnaufal/soil-carbon-estimator.git
 cd soil-carbon-estimator
 
-# Create a virtual environment and install dependencies
+# 2. Create a virtual environment and install dependencies
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Run the estimator on the demo dataset
+# 3. Run the estimator on the included demo dataset
 python -c "
 from src.main import SoilCarbonEstimator
 result = SoilCarbonEstimator().run('demo/sample_data.csv')
 print(f\"Records: {result['total_records']}\")
 print(f\"Mean SOC: {result['soc_stats']['mean_tC_ha']} tC/ha\")
+print(f\"Total SOC: {result['soc_stats']['total_tC_ha']} tC/ha\")
 "
 ```
 
@@ -52,6 +55,22 @@ print(f"Mean SOC stock:    {result['soc_stats']['mean_tC_ha']} tC/ha")
 print(f"Total SOC stock:   {result['soc_stats']['total_tC_ha']} tC/ha")
 ```
 
+### Using your own DataFrame
+
+```python
+import pandas as pd
+from src.main import SoilCarbonEstimator
+
+df = pd.read_csv("your_data.csv")
+estimator = SoilCarbonEstimator()
+result = estimator.analyze(df)
+
+print(f"Records processed : {result['total_records']}")
+if "soc_stats" in result:
+    print(f"Mean SOC stock    : {result['soc_stats']['mean_tC_ha']} tC/ha")
+    print(f"Valid SOC records : {result['soc_stats']['n_valid']}")
+```
+
 ### Single SOC stock calculation
 
 ```python
@@ -63,9 +82,21 @@ print(f"SOC stock: {stock} tC/ha")
 # SOC stock: 95.76 tC/ha
 ```
 
-### Sample output
+### Export results to a flat DataFrame
 
-Running the full pipeline on `demo/sample_data.csv` (20 tropical soil sites):
+```python
+from src.main import SoilCarbonEstimator
+
+estimator = SoilCarbonEstimator()
+result = estimator.run("demo/sample_data.csv")
+
+metrics_df = estimator.to_dataframe(result)
+print(metrics_df.to_string(index=False))
+```
+
+## Sample Output
+
+Running the full pipeline on `demo/sample_data.csv` (20 tropical soil sites across West Java and Central Java, Indonesia):
 
 ```
 === Soil Carbon Estimator ===
@@ -73,34 +104,56 @@ File: demo/sample_data.csv
 Records processed: 20
 
 --- SOC Stock Summary ---
-  mean_tC_ha: 75.86
-  min_tC_ha: 41.75
-  max_tC_ha: 121.34
-  total_tC_ha: 1517.16
-  n_valid: 20
+  mean_tC_ha  : 75.86
+  min_tC_ha   : 41.75
+  max_tC_ha   : 121.34
+  total_tC_ha : 1517.16
+  n_valid     : 20
 
 --- Column Means ---
-  latitude: -6.832
-  longitude: 107.38
-  depth_cm: 27.0
-  bulk_density_g_cm3: 1.202
-  organic_carbon_pct: 2.441
-  clay_pct: 36.0
-  soc_stock_tC_ha: 75.858
+  latitude              : -6.832
+  longitude             : 107.380
+  depth_cm              : 27.000
+  bulk_density_g_cm3    : 1.201
+  organic_carbon_pct    : 2.441
+  clay_pct              : 36.000
+  soc_stock_tC_ha       : 75.860
 ```
 
-### Running tests
+### Sample data preview (`demo/sample_data.csv`)
+
+| site_id | depth_cm | bulk_density_g_cm3 | organic_carbon_pct | land_use | soc_stock_tC_ha |
+|---------|----------|--------------------|--------------------|----------------|-----------------|
+| TH001 | 30 | 1.12 | 2.85 | tropical_forest | 95.76 |
+| TH002 | 30 | 1.08 | 3.41 | tropical_forest | 110.48 |
+| TH003 | 20 | 1.25 | 1.92 | cropland | 48.00 |
+| TH006 | 20 | 1.05 | 4.12 | peatland | 86.52 |
+| TH013 | 30 | 1.07 | 3.78 | tropical_forest | 121.34 |
+
+## Running Tests
 
 ```bash
+# Run all tests with verbose output
 pytest tests/ -v
+
+# Run with coverage report
+pytest tests/ -v --cov=src --cov-report=term-missing
 ```
+
+Expected output:
 
 ```
 tests/test_estimator.py::TestCalculateSOCStock::test_basic_calculation PASSED
 tests/test_estimator.py::TestCalculateSOCStock::test_zero_organic_carbon_returns_zero PASSED
+tests/test_estimator.py::TestCalculateSOCStockEdgeCases::test_negative_bulk_density_raises PASSED
+tests/test_estimator.py::TestValidateDataFrame::test_empty_dataframe_raises PASSED
+tests/test_estimator.py::TestAddSOCStockColumn::test_returns_new_dataframe PASSED
+tests/test_estimator.py::TestAnalyze::test_analyze_does_not_mutate_input PASSED
 tests/test_estimator.py::TestRunPipeline::test_run_on_sample_csv PASSED
+tests/test_estimator.py::TestFilterValidRows::test_nan_row_dropped PASSED
+tests/test_estimator.py::TestDataGenerator::test_generate_sample_returns_dataframe PASSED
 ...
-============================== 42 passed in 0.25s ==============================
+============================== passed in < 1s ==============================
 ```
 
 ## Tech Stack
@@ -164,16 +217,32 @@ soil-carbon-estimator/
 │   ├── soc_calculator.py   # Pure SOC calculation and validation functions
 │   └── data_generator.py   # Synthetic data generator
 ├── tests/
-│   └── test_estimator.py   # 42 tests across 8 test classes
+│   ├── __init__.py
+│   └── test_estimator.py   # Unit and integration tests (pytest)
 ├── demo/
-│   └── sample_data.csv     # 20-row tropical soil dataset
+│   └── sample_data.csv     # 20-row tropical soil dataset (Indonesian sites)
 ├── sample_data/
 │   └── sample_data.csv     # Standalone sample for quick testing
 ├── examples/
 │   └── basic_usage.py      # Runnable usage example
+├── data/
+│   └── .gitkeep            # Placeholder for generated data files
 ├── requirements.txt
+├── CHANGELOG.md
 ├── LICENSE
 └── README.md
 ```
+
+### Required CSV columns
+
+To enable full SOC analysis your input file must contain these three columns (exact names, case-insensitive after preprocessing):
+
+| Column | Unit | Valid range |
+|--------|------|-------------|
+| `bulk_density_g_cm3` | g/cm3 | 0 – 2.65 |
+| `organic_carbon_pct` | % | 0 – 100 |
+| `depth_cm` | cm | > 0, <= 300 |
+
+Additional columns (e.g. `latitude`, `longitude`, `land_use`, `clay_pct`) are preserved and included in summary statistics.
 
 > Built by [Achmad Naufal](https://github.com/achmadnaufal) | Lead Data Analyst | Power BI · SQL · Python · GIS
