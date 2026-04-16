@@ -130,6 +130,84 @@ Records processed: 20
 | TH006 | 20 | 1.05 | 4.12 | peatland | 86.52 |
 | TH013 | 30 | 1.07 | 3.78 | tropical_forest | 121.34 |
 
+## New: SOC Stock Change Calculator
+
+Compute the change in soil organic carbon stock between two paired survey
+datasets, the annualised accrual rate, and 95 % confidence-interval
+uncertainty bands propagated from per-site measurement error.
+
+### Step-by-step usage
+
+**1. Prepare two survey DataFrames** (each must have a `site_id` column and
+a `soc_stock_tC_ha` column — the output of the existing pipeline works
+directly):
+
+```python
+import pandas as pd
+from src.main import SoilCarbonEstimator
+
+estimator = SoilCarbonEstimator()
+result_2020 = estimator.run("data/survey_2020.csv")   # earlier survey
+result_2024 = estimator.run("data/survey_2024.csv")   # later survey
+
+# Or use plain DataFrames
+survey_t0 = pd.read_csv("data/survey_2020.csv")
+survey_t1 = pd.read_csv("data/survey_2024.csv")
+```
+
+**2. Compute per-site stock change:**
+
+```python
+from src.stock_change_calculator import compute_stock_change
+
+change_df = compute_stock_change(
+    survey_t0=survey_t0,
+    survey_t1=survey_t1,
+    years_elapsed=4.0,          # years between the two surveys
+    site_id_col="site_id",      # column that identifies each sampling site
+)
+
+print(change_df.to_string(index=False))
+# site_id  soc_t0_tC_ha  soc_t1_tC_ha  delta_soc_tC_ha  annual_rate_tC_ha_yr  ci_lower_tC_ha  ci_upper_tC_ha
+#   TH001         95.76        103.80             8.04                  2.01           -4.25           20.33
+#   TH002        110.48        118.00             7.52                  1.88           -5.31           20.35
+```
+
+**3. Get an aggregate summary with confidence intervals:**
+
+```python
+from src.stock_change_calculator import summarise_stock_change
+
+summary = summarise_stock_change(change_df, years_elapsed=4.0)
+
+print(f"Sites analysed       : {summary.n_sites}")
+print(f"Mean delta SOC       : {summary.mean_delta_tC_ha} tC/ha")
+print(f"Total delta SOC      : {summary.total_delta_tC_ha} tC/ha")
+print(f"Mean annual rate     : {summary.mean_annual_rate_tC_ha_yr} tC/ha/yr")
+print(f"95% CI on mean delta : [{summary.ci_lower_tC_ha}, {summary.ci_upper_tC_ha}] tC/ha")
+```
+
+**4. Optionally supply per-site measurement error** to get more precise
+uncertainty bands (column must be present in both DataFrames):
+
+```python
+change_df = compute_stock_change(
+    survey_t0=survey_t0,
+    survey_t1=survey_t1,
+    years_elapsed=4.0,
+    error_col="error_tC_ha",    # 1-sigma absolute error in tC/ha
+)
+```
+
+When `error_col` is omitted a conservative 5 % relative uncertainty is
+assumed for both surveys.
+
+> **Note:** only sites present in **both** surveys (inner join on
+> `site_id_col`) are included in the output.  Sites unique to one survey
+> are silently excluded.
+
+---
+
 ## Running Tests
 
 ```bash

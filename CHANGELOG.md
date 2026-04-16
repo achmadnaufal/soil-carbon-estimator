@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased] - 2026-04-17
+
+### Added
+- `src/stock_change_calculator.py` — new module for computing SOC stock
+  change between two paired survey DataFrames.  Key features:
+  - `compute_stock_change()`: inner-joins two survey DataFrames on a site
+    identifier, computes per-site absolute delta (tC/ha), annualised accrual
+    rate (tC/ha/yr), and 95 % confidence-interval bounds propagated from
+    per-site measurement uncertainty (defaults to 5 % relative CV when no
+    explicit error column is supplied).
+  - `summarise_stock_change()`: aggregates per-site results into a frozen
+    `StockChangeSummary` dataclass containing mean/total delta, mean annual
+    rate, and a 95 % CI on the mean computed from the standard error of the
+    site-level deltas.
+  - Full input validation with descriptive `TypeError` / `ValueError`
+    messages at every boundary; immutable outputs (returns new DataFrames
+    and dataclasses, never mutates inputs).
+- `tests/test_stock_change_calculator.py` — 28 pytest tests covering:
+  happy path, immutability, inner-join behaviour, custom error columns,
+  parametrized annual-rate checks across four time spans, single-site edge
+  case, zero/negative `years_elapsed`, missing columns, no matching sites,
+  and empty summary DataFrame.
+- README "New: SOC Stock Change Calculator" section with a 4-step usage
+  example including optional error-column usage and a note on inner-join
+  semantics.
+
 ## [0.2.0] - 2026-04-16
 
 ### Added
