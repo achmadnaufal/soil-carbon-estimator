@@ -208,6 +208,85 @@ assumed for both surveys.
 
 ---
 
+## New: Depth-Profile Harmonisation
+
+Field surveys rarely sample SOC at the same depths, but downstream
+reporting standards (IPCC GPG, FAO GSOC, Verra VM0042) require stocks
+harmonised to a reference depth such as **0-30 cm** or **0-100 cm**.
+The `src.depth_profile` module provides three pure functions that
+resample, integrate, and harmonise irregular SOC profiles.
+
+### Quick Start: harmonise an irregular profile to 0-30 cm
+
+```python
+from src.depth_profile import integrate_soc_to_depth
+
+# Per-horizon SOC stocks measured at three depths (0-10, 10-20, 20-40 cm)
+depths_cm = [10.0, 20.0, 40.0]
+stocks    = [25.0, 22.0, 18.0]   # tC/ha per horizon
+
+stock_30cm = integrate_soc_to_depth(depths_cm, stocks, target_depth_cm=30)
+print(f"SOC 0-30 cm: {stock_30cm} tC/ha")
+# SOC 0-30 cm: 56.0 tC/ha
+```
+
+### Step-by-step usage
+
+**1. Interpolate a per-horizon profile onto any depth grid**:
+
+```python
+from src.depth_profile import interpolate_soc_profile
+
+# Resample onto a regular 5 cm grid
+grid = list(range(5, 41, 5))
+stocks_on_grid = interpolate_soc_profile(depths_cm, stocks, grid)
+```
+
+**2. Integrate to a reference depth (with optional exponential
+extrapolation beyond the deepest sample)**:
+
+```python
+# Within the measured range
+stock_30 = integrate_soc_to_depth(depths_cm, stocks, target_depth_cm=30)
+
+# Beyond the deepest sample - fits an exponential decay model
+stock_100 = integrate_soc_to_depth(depths_cm, stocks, target_depth_cm=100)
+
+# Disable extrapolation to fail loudly instead of fitting a model
+try:
+    integrate_soc_to_depth(depths_cm, stocks, 100, extrapolate=False)
+except ValueError as e:
+    print(e)
+```
+
+**3. Harmonise a long-format multi-site DataFrame**:
+
+```python
+import pandas as pd
+from src.depth_profile import harmonise_to_reference_depth
+
+long_df = pd.DataFrame({
+    "site_id":         ["TH001", "TH001", "TH002", "TH002", "TH002"],
+    "depth_cm":        [10,      30,      10,      20,      40],
+    "soc_stock_tC_ha": [25.0,    22.0,    28.0,    24.0,    18.0],
+})
+
+harmonised = harmonise_to_reference_depth(long_df, target_depth_cm=30)
+print(harmonised.to_string(index=False))
+# site_id  soc_stock_tC_ha  reference_depth_cm  n_horizons
+#   TH001            47.00                30.0           2
+#   TH002            58.00                30.0           3
+```
+
+> **Note:** stocks are treated as the carbon contained *within* each
+> horizon (not point densities).  When the target depth lies between
+> two sampled horizons the cumulative-stock curve is linearly
+> interpolated; for targets beyond the deepest sample an exponential
+> decay model is fitted (Bernoux et al., 1998) and integrated
+> analytically.
+
+---
+
 ## Running Tests
 
 ```bash
@@ -291,12 +370,16 @@ flowchart LR
 soil-carbon-estimator/
 ├── src/
 │   ├── __init__.py
-│   ├── main.py             # SoilCarbonEstimator pipeline class
-│   ├── soc_calculator.py   # Pure SOC calculation and validation functions
-│   └── data_generator.py   # Synthetic data generator
+│   ├── main.py                     # SoilCarbonEstimator pipeline class
+│   ├── soc_calculator.py           # Pure SOC calculation and validation functions
+│   ├── data_generator.py           # Synthetic data generator
+│   ├── stock_change_calculator.py  # Paired-survey stock change + uncertainty
+│   └── depth_profile.py            # Depth-profile interpolation + harmonisation
 ├── tests/
 │   ├── __init__.py
-│   └── test_estimator.py   # Unit and integration tests (pytest)
+│   ├── test_estimator.py                  # Unit and integration tests (pytest)
+│   ├── test_stock_change_calculator.py    # Stock change tests
+│   └── test_depth_profile.py              # Depth-profile harmonisation tests
 ├── demo/
 │   └── sample_data.csv     # 20-row tropical soil dataset (Indonesian sites)
 ├── sample_data/

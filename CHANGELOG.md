@@ -4,7 +4,43 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-04-17
+## [Unreleased] - 2026-04-18
+
+### Added
+- `src/depth_profile.py` — new module for harmonising irregular SOC
+  depth profiles to a reference depth (typical IPCC / FAO GSOC / Verra
+  reporting requirement).  Public API:
+  - `interpolate_soc_profile()`: resample per-horizon SOC stocks onto an
+    arbitrary depth grid via linear interpolation; targets above /
+    below the measured range are clamped (no silent extrapolation).
+  - `integrate_soc_to_depth()`: cumulative SOC stock from surface to a
+    target reference depth.  Within-range targets use linear
+    interpolation of the cumulative-stock curve; beyond-range targets
+    fit an exponential decay model (Bernoux 1998) and integrate
+    analytically.  `extrapolate=False` raises a clear `ValueError`
+    instead of fitting.
+  - `harmonise_to_reference_depth()`: groupby-style helper that applies
+    `integrate_soc_to_depth()` to each site in a long-format DataFrame
+    and returns one harmonised row per site.
+  - Comprehensive input validation (TypeError / ValueError) for empty
+    profiles, NaN, negative depths/stocks, duplicate depths, depths
+    above the 300 cm physical maximum, and non-numeric targets.
+  - Strict immutability: every public function returns new objects and
+    never mutates its inputs.
+- `tests/test_depth_profile.py` — 43 pytest tests covering: happy path
+  interpolation, target ordering, clamping above/below range,
+  integration within / at / beyond measured horizons, exponential
+  extrapolation monotonicity, single-horizon edge case, multi-site
+  groupby harmonisation, custom column names, and full immutability
+  invariants for all three public functions.
+- `src/__init__.py` — package-level re-exports for the depth-profile
+  helpers, the existing pipeline class, the SOC calculator helpers, and
+  the stock-change utilities.
+- README "New: Depth-Profile Harmonisation" section with a Quick Start
+  example and a 3-step usage walkthrough (interpolate, integrate,
+  harmonise) including the exponential-extrapolation note.
+
+## [0.2.1] - 2026-04-17
 
 ### Added
 - `src/stock_change_calculator.py` — new module for computing SOC stock
