@@ -4,9 +4,42 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-04-18
+## [Unreleased] - 2026-04-19
 
 ### Added
+- `src/cli.py` — argparse-based command-line interface exposing four
+  sub-commands for the most common analyst workflows:
+  - `analyze` runs the full `SoilCarbonEstimator` pipeline on a CSV or
+    Excel file and emits results to stdout or file in CSV (flattened
+    metric/value) or JSON format.
+  - `harmonise` integrates a long-format profile dataset to a reference
+    depth (default 30 cm) using `harmonise_to_reference_depth`.
+  - `stock-change` joins a baseline and a monitoring survey on
+    `site_id` and emits per-site deltas or a one-row aggregate summary
+    (requires `--years`).
+  - `generate` writes a synthetic demo dataset using
+    `data_generator.generate_sample` with a configurable row count and
+    seed.
+  - Friendly error handling: missing files and unsupported extensions
+    return exit code 2 with a message on stderr rather than tracebacks.
+- `src/plotting.py` — optional matplotlib-based visualisation helpers:
+  - `plot_soc_histogram` for the distribution of SOC stock values.
+  - `plot_soc_by_land_use` for a boxplot stratified by land-use class.
+  - `plot_depth_profile` for a SOC-vs-depth line chart with an inverted
+    y-axis (soil-science convention).  All helpers return
+    `matplotlib.figure.Figure` objects; callers decide when/where to
+    persist them.  matplotlib is imported lazily so the package remains
+    usable when matplotlib is not installed.
+- `tests/test_cli.py` — 8 pytest tests covering sub-command wiring,
+  CSV/JSON output, error handling for missing files, the harmonise and
+  stock-change flows end-to-end, and synthetic dataset generation.
+- `tests/test_plotting.py` — 10 pytest tests covering histogram, boxplot,
+  and depth-profile helpers including edge cases (empty DataFrame,
+  missing columns, all-NaN columns, mismatched input lengths, negative
+  depths) with `importorskip` for environments without matplotlib.
+- `src/__init__.py` now re-exports `cli_main` for programmatic access.
+
+### [Earlier additions still in Unreleased]
 - `src/depth_profile.py` — new module for harmonising irregular SOC
   depth profiles to a reference depth (typical IPCC / FAO GSOC / Verra
   reporting requirement).  Public API:

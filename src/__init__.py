@@ -21,6 +21,7 @@ from src.depth_profile import (  # noqa: F401
     integrate_soc_to_depth,
     interpolate_soc_profile,
 )
+from src.cli import main as cli_main  # noqa: F401
 
 __all__ = [
     # SOC calculator
@@ -39,4 +40,6 @@ __all__ = [
     "harmonise_to_reference_depth",
     "integrate_soc_to_depth",
     "interpolate_soc_profile",
+    # CLI
+    "cli_main",
 ]

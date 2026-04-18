@@ -287,6 +287,77 @@ print(harmonised.to_string(index=False))
 
 ---
 
+## New: Command-Line Interface
+
+The package now ships with an argparse-based CLI (`python -m src.cli`)
+that exposes the most common analyst workflows without writing any
+Python.  All sub-commands read/write CSV (or JSON for `analyze`) so they
+slot cleanly into shell pipelines and Makefile targets.
+
+### Sub-commands
+
+| Command | Purpose |
+|---------|---------|
+| `analyze` | Full `SoilCarbonEstimator` pipeline on a CSV/Excel file. |
+| `harmonise` | Harmonise a long-format profile dataset to a reference depth. |
+| `stock-change` | Compare two epochs (baseline vs monitoring) per site. |
+| `generate` | Create a synthetic demo dataset for quick experiments. |
+
+### Step-by-step usage
+
+```bash
+# 1. Run the full estimation pipeline on the demo data, JSON output.
+python -m src.cli analyze demo/sample_data.csv --format json -o report.json
+
+# 2. Harmonise a long-format profile dataset to 0-30 cm.
+python -m src.cli harmonise profiles.csv --depth 30 -o harmonised.csv
+
+# 3. Compute per-site SOC stock change over a 4-year interval.
+python -m src.cli stock-change baseline.csv monitoring.csv \
+    --years 4 --aggregate -o summary.csv
+
+# 4. Generate a reproducible 50-row synthetic dataset.
+python -m src.cli generate --rows 50 --seed 42 -o synthetic.csv
+```
+
+Every sub-command supports `-h/--help` for a full option reference.
+
+---
+
+## New: Plotting Utilities
+
+`src/plotting.py` provides three pure helper functions that each return
+a `matplotlib.figure.Figure` — callers decide where to persist them.
+matplotlib is imported **lazily**, so the rest of the package remains
+importable without it.
+
+```python
+import pandas as pd
+from src.plotting import (
+    plot_soc_histogram,
+    plot_soc_by_land_use,
+    plot_depth_profile,
+)
+
+df = pd.read_csv("demo/sample_data.csv")
+
+fig1 = plot_soc_histogram(df)
+fig1.savefig("soc_histogram.png", dpi=150)
+
+fig2 = plot_soc_by_land_use(df)
+fig2.savefig("soc_by_land_use.png", dpi=150)
+
+fig3 = plot_depth_profile([10, 20, 40], [25.0, 22.0, 18.0])
+fig3.savefig("depth_profile.png", dpi=150)
+```
+
+Plotting helpers validate their inputs (empty DataFrames, missing
+columns, all-NaN columns, mismatched array lengths, negative depths)
+and raise a clear `ValueError` with a user-friendly message instead of
+producing an invalid figure.
+
+---
+
 ## Running Tests
 
 ```bash
