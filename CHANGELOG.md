@@ -4,9 +4,41 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-04-19
+## [Unreleased] - 2026-04-21
 
 ### Added
+- `src/soc_saturation.py` — new module implementing the Hassink (1997)
+  pedotransfer function for SOC saturation capacity and deficit, with
+  an alternative Six et al. (2002) coefficient set.  Public API:
+  - `calculate_c_saturation()`: linear pedotransfer `C_sat = a + b*(clay+silt)`
+    returning g C / kg whole soil.
+  - `c_sat_stock_tC_ha()`: convert saturation concentration to a per-hectare
+    stock for a specified layer thickness and bulk density.
+  - `calculate_saturation()`: high-level wrapper returning an immutable
+    `SaturationResult` with saturation stock, deficit (clipped at zero),
+    and saturation ratio.
+  - Frozen `SaturationInputs` / `SaturationResult` dataclasses and a
+    `with_method()` helper for method swapping without mutation.
+  - Batch helpers `validate_saturation_dataframe()`,
+    `add_saturation_columns()`, and `summarise_saturation()` for
+    DataFrame-scale workflows, with NaN-safe row handling.
+  - Full input validation (clay/silt in 0–100, clay+silt ≤ 100,
+    BD within 0.1–2.65 g/cm3, depth > 0 and ≤ 300 cm) with descriptive
+    `ValueError` / `TypeError` messages.
+- `tests/test_soc_saturation.py` — 46 pytest tests covering the
+  pedotransfer equation, method switching, stock conversion,
+  supersaturation clipping, immutability of inputs and results,
+  DataFrame batch paths, NaN handling, and a smoke test against the
+  bundled sample data.
+- `sample_data/soc_saturation_scenarios.csv` — 20-row realistic dataset
+  spanning tropical forest, tropical cropland, agroforestry, savanna,
+  temperate forest/grassland/cropland, boreal, andosol, vertisol,
+  sandy/arid, and deep-layer (60 cm) profiles.
+- README "SOC saturation deficit (Hassink 1997)" section with a
+  single-profile example and a DataFrame batch example for MRV and
+  carbon-farming feasibility analyses.
+
+### Earlier additions still in Unreleased (CLI + plotting)
 - `src/cli.py` — argparse-based command-line interface exposing four
   sub-commands for the most common analyst workflows:
   - `analyze` runs the full `SoilCarbonEstimator` pipeline on a CSV or

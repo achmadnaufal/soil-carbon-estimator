@@ -16,6 +16,7 @@ A Python toolkit for estimating soil organic carbon (SOC) stocks from field meas
 - Column-name normalisation and data cleaning
 - Summary statistics (mean, min, max, totals) per numeric column
 - Immutable data pipeline -- all transformations return new objects, never mutate inputs
+- **SOC saturation deficit** via the Hassink (1997) pedotransfer function -- estimate how much more carbon a soil can stabilise before reaching its clay+silt protection limit
 - Comprehensive unit and integration tests with pytest (80%+ coverage target)
 
 ## Quick Start
@@ -80,6 +81,43 @@ from src.soc_calculator import calculate_soc_stock
 stock = calculate_soc_stock(1.12, 2.85, 30)
 print(f"SOC stock: {stock} tC/ha")
 # SOC stock: 95.76 tC/ha
+```
+
+### SOC saturation deficit (Hassink 1997)
+
+Estimate how much additional carbon a soil can physically stabilise on its
+fine mineral fraction (clay + silt). Useful for MRV, carbon-farming
+feasibility, and ranking sites by sequestration headroom.
+
+```python
+from src.soc_saturation import SaturationInputs, calculate_saturation
+
+inputs = SaturationInputs(
+    clay_pct=45.0,
+    silt_pct=20.0,
+    bulk_density_g_cm3=1.15,
+    depth_cm=30.0,
+    current_soc_stock_tC_ha=55.0,
+)
+
+result = calculate_saturation(inputs)
+print(f"C saturation:        {result.c_sat_stock_tC_ha} tC/ha")
+print(f"Saturation deficit:  {result.saturation_deficit_tC_ha} tC/ha")
+print(f"Saturation ratio:    {result.saturation_ratio:.2f}")
+```
+
+Batch-process a DataFrame of sites:
+
+```python
+import pandas as pd
+from src.soc_saturation import add_saturation_columns, summarise_saturation
+
+df = pd.read_csv("sample_data/soc_saturation_scenarios.csv")
+enriched = add_saturation_columns(df)
+summary = summarise_saturation(enriched)
+print(summary)
+# {'mean_deficit_tC_ha': ..., 'total_deficit_tC_ha': ...,
+#  'mean_ratio': ..., 'n_saturated': ..., 'n_valid': 20}
 ```
 
 ### Export results to a flat DataFrame
@@ -443,12 +481,14 @@ soil-carbon-estimator/
 │   ├── __init__.py
 │   ├── main.py                     # SoilCarbonEstimator pipeline class
 │   ├── soc_calculator.py           # Pure SOC calculation and validation functions
+│   ├── soc_saturation.py           # Hassink 1997 SOC saturation deficit model
 │   ├── data_generator.py           # Synthetic data generator
 │   ├── stock_change_calculator.py  # Paired-survey stock change + uncertainty
 │   └── depth_profile.py            # Depth-profile interpolation + harmonisation
 ├── tests/
 │   ├── __init__.py
 │   ├── test_estimator.py                  # Unit and integration tests (pytest)
+│   ├── test_soc_saturation.py             # Saturation module tests (46 cases)
 │   ├── test_stock_change_calculator.py    # Stock change tests
 │   └── test_depth_profile.py              # Depth-profile harmonisation tests
 ├── demo/
